@@ -16,7 +16,6 @@ router.get('/', async (req, res, next) => {
       nestTables: true
     })
 
-    
     // Exercício 3: negociação de conteúdo para esta resposta
     //
     // renderiza a view de listagem de pessoas, passando como contexto
@@ -26,10 +25,11 @@ router.get('/', async (req, res, next) => {
     //   - por exemplo, assim que uma pessoa é excluída, uma mensagem de
     //     sucesso pode ser mostrada
     // - error: idem para mensagem de erro
-    res.render('list-people', {
-      people,
-      success: req.flash('success'),
-      error: req.flash('error')
+    const success = req.flash('success')
+    const error = req.flash('error')
+    res.format({
+      html: () => res.render('list-people', { people, success, error }),
+      json: () => res.json({ people })
     })
 
   } catch (error) {
@@ -88,6 +88,17 @@ router.get('/new/', (req, res) => {
 //   2. Redirecionar para a rota de listagem de pessoas
 //      - Em caso de sucesso do INSERT, colocar uma mensagem feliz
 //      - Em caso de erro do INSERT, colocar mensagem vermelhinha
+router.post('/', async (req, res, next) => {
+  const name = req.body.name
+  try {
+    await db.execute('INSERT INTO person (name) VALUES (?)', [name])
+    req.flash('success', `${name} foi registrado(a) com sucesso!`)
+  } catch (error) {
+    req.flash('error', `Erro ao registrar pessoa: ${error}`)
+  } finally {
+    res.redirect('/')
+  }
+})
 
 
 /* DELETE uma pessoa */
@@ -97,6 +108,21 @@ router.get('/new/', (req, res) => {
 //   2. Redirecionar para a rota de listagem de pessoas
 //      - Em caso de sucesso do INSERT, colocar uma mensagem feliz
 //      - Em caso de erro do INSERT, colocar mensagem vermelhinha
+router.delete('/:id', async (req, res, next) => {
+  const id = req.params.id
+  try {
+    const [result] = await db.execute('DELETE FROM person WHERE id=?', [id])
+    if (result.affectedRows !== 1) {
+      req.flash('error', 'Pessoa não encontrada.')
+    } else {
+      req.flash('success', 'Pessoa excluída com sucesso!')
+    }
+  } catch (error) {
+    req.flash('error', `Erro ao excluir pessoa: ${error}`)
+  } finally {
+    res.redirect('/')
+  }
+})
 
 
 export default router
